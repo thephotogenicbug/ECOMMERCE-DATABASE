@@ -82,21 +82,23 @@ exports.deleteProduct = catchAsyncErrors(async (req, res, next) => {
 // Create new Review or update the review
 exports.createProductReview = catchAsyncErrors(async (req, res, next) => {
   const { rating, comment, productId } = req.body;
+
   const review = {
     user: req.user._id,
     name: req.user.name,
     rating: Number(rating),
     comment,
   };
+
   const product = await Product.findById(productId);
 
   const isReviewed = product.reviews.find(
-    (rev) => rev.user.toString() === req.user._id
+    (rev) => rev.user.toString() === req.user._id.toString()
   );
 
   if (isReviewed) {
     product.reviews.forEach((rev) => {
-      if (rev.user.toString() === req.user._id)
+      if (rev.user.toString() === req.user._id.toString())
         (rev.rating = rating), (rev.comment = comment);
     });
   } else {
@@ -104,15 +106,16 @@ exports.createProductReview = catchAsyncErrors(async (req, res, next) => {
     product.numberOfReviews = product.reviews.length;
   }
 
-  // 4 , 5 , 5, 2 = 16/4 = 4
-
   let avg = 0;
-  product.ratings =
-    product.reviews.forEach((rev) => {
-      avg + rev.rating;
-    }) / product.reviews.length;
+
+  product.reviews.forEach((rev) => {
+    avg += rev.rating;
+  });
+
+  product.ratings = avg / product.reviews.length;
 
   await product.save({ validateBeforeSave: false });
+
   res.status(200).json({
     success: true,
   });
